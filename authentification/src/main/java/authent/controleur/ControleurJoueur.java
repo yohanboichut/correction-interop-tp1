@@ -84,7 +84,7 @@ public class ControleurJoueur {
         } catch (JoueurInexistantException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Mauvaises informations transmises !");
         }
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
 }

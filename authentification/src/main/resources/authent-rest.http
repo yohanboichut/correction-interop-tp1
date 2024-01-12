@@ -23,3 +23,26 @@ Authorization: {{yoh_token}}
         client.assert(response.status === 200, "Response status is not 200");
     });
 %}
+
+###
+
+DELETE http://localhost:8080/authent/inscription/yoh4n
+Authorization: {{yoh_token}}
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 204, "Response status is not 204");
+    });
+%}
+
+
+###
+
+GET http://localhost:8080/authent/inscription/yoh4n
+Authorization: {{yoh_token}}
+
+> {%
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 404, "Response status is not 404");
+    });
+%}

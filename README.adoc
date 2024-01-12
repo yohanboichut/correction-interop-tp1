@@ -1,0 +1,262 @@
+= Architecture Micro-services pour Pile ou Face
+
+
+Vous avez pour le moment deux modules modèles.
+Les façades n'ont pas été intégrées dans les modules pour des raisons techniques (@Component).
+Vous intégrerez vos façades FacadePartie(Impl) et
+FacadeJoueur(Impl) dans les packages pileouface.modele et authent.modele de vos web-services respectifs. Vous trouverez classes et interfaces à la fin de ce sujet.
+
+
+
+== Développement d'un service Rest authent et d'une service de jeu
+
+* Développez un service d'authentification permettant à un utilisateur de s'inscrire et de générer un token.
+Pour faire ceci, créer une application Springboot dernière génération utilisant Sprinsec 6.0.1.
+Vous pouvez vous aider des dépôts suivant :
+** https://github.com/ali-bouali/spring-boot-3-jwt-security
+** https://github.com/fredmoal/live-demo-security
+
+Le but principal ici est d'utiliser RSA (cryptographie asymétrique). L'idée est que le service d'authentification possède un couple de clé
+(une clé secrète et une clé publique). Tous les tokens seront chiffrés (signés) avec la clé secrète. Vous pouvez utiliser le script generatekeys.sh pour générer un couple de clé.
+
+
+* Développez ensuite un service de jeu pileouface. Celui ci ne devra être accessible uniquement après authentification.
+Une fois authentifié, le service peut alors accéder à l'identifiant du joueur
+et ainsi accéder aux fonctionnalités du jeu. Le service de jeu lui devra connaître
+uniquement la clé publique  du service d'authentification.
+
+
+
+
+
+
+
+[source, java]
+----
+package authent.modele;
+
+
+public interface FacadeJoueur {
+    /**
+     * Inscription d'un nouveau joueur à la POFOL
+     *
+     * @param email
+     * @param mdp
+     * @return
+     * @throws PseudoDejaPrisException
+     */
+    Joueur inscription(String email,String pseudo, String mdp) throws PseudoDejaPrisException;
+
+    Joueur getJoueurByPseudo(String idJoueur) throws JoueurInexistantException;
+
+
+    /**
+     * Permet de se désinscrire de la plate-forme
+     *
+     * @param pseudo
+     * @throws JoueurInexistantException
+     */
+    void desincription(String pseudo) throws JoueurInexistantException;
+
+
+}
+
+
+----
+
+[source, java]
+----
+@Component("facadeJoueurs")
+public class FacadeJoueurImpl implements FacadeJoueur {
+
+
+    /**
+     * Dictionnaire des joueurs inscrits
+     */
+    private Map<String, Joueur> joueurs;
+
+
+    public FacadeJoueurImpl() {
+        this.joueurs = new HashMap<>();
+    }
+
+
+    @Override
+    public Joueur inscription(String email, String pseudo, String mdp) throws PseudoDejaPrisException {
+        if (joueurs.containsKey(pseudo))
+            throw new PseudoDejaPrisException();
+        Joueur v = new Joueur(email, pseudo,mdp);
+        this.joueurs.put(pseudo, v);
+        return v;
+    }
+
+    @Override
+    public Joueur getJoueurByPseudo(String idJoueur)  throws JoueurInexistantException {
+        if (!joueurs.containsKey(idJoueur)) {
+            throw new JoueurInexistantException();
+        }
+        return joueurs.get(idJoueur);
+    }
+
+    @Override
+    public void desincription(String pseudo) throws JoueurInexistantException {
+        if (!joueurs.containsKey(pseudo))
+            throw new JoueurInexistantException();
+        joueurs.remove(pseudo);
+    }
+
+
+
+}
+
+----
+
+
+[source, java]
+----
+package pileouface.modele;
+
+import java.util.Collection;
+
+public interface FacadeParties {
+
+    /**
+     * Permet de jouer une partie
+     *
+     * @param pseudo
+     * @param choix
+     * @return le résultat de la partie
+     * @throws MauvaisIdentifiantConnexionException
+     */
+    Partie jouer(String pseudo, String choix) throws MauvaisIdentifiantConnexionException;
+
+
+    /**
+     * Permet de récupérer les statistiques d'un joueur
+     * @param pseudo
+     * @return
+     * @throws MauvaisIdentifiantConnexionException
+     */
+
+    Statistiques getStatistiques(String pseudo) throws MauvaisIdentifiantConnexionException;
+
+    /**
+     * Permet de récupérer l'historique des parties d'un joueur connecté
+     *
+     * @param idConnexion
+     * @return
+     * @throws MauvaisIdentifiantConnexionException
+     */
+
+    Collection<Partie> getAllParties(String idConnexion) throws MauvaisIdentifiantConnexionException;
+
+
+    /**
+     * Permet de récupérer un joueur par son pseudo s'il existe.
+     * S'il n'existe pas, un nouveau joueur est créé
+     * @param pseudo
+     * @return
+     */
+    Joueur getOrCreateJoueur(String pseudo);
+
+
+    /**
+     * Permet de supprimer un joueur du SI
+     * @param pseudo
+     */
+    void suppressionJoueur(String pseudo);
+}
+
+
+----
+
+
+[source, java]
+----
+package pileouface.modele;
+
+import org.springframework.stereotype.Component;
+
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+
+@Component("facadeParties")
+public class FacadePartiesImpl implements FacadeParties {
+    /**
+     * Dictionnaire des joueurs connectés indexés par leur pseudo
+     */
+    private Map<String, Joueur> joueursActuels;
+
+    public FacadePartiesImpl() {
+        this.joueursActuels = new HashMap<>();
+    }
+
+    private void checkIdConnexion(String idConnexion) throws MauvaisIdentifiantConnexionException {
+        if (!this.joueursActuels.containsKey(idConnexion))
+            throw new MauvaisIdentifiantConnexionException();
+    }
+
+    @Override
+    public Partie jouer(String pseudo, String choix) throws MauvaisIdentifiantConnexionException {
+        this.checkIdConnexion(pseudo);
+        Joueur j = this.joueursActuels.get(pseudo);
+        Partie partie = j.jouer(choix);
+        return partie;
+    }
+
+    /**
+     * Permet de récupérer les statistiques d'un utilisateur connecté
+     * @param pseudo
+     * @return
+     * @throws MauvaisIdentifiantConnexionException
+     */
+    @Override
+    public Statistiques getStatistiques(String pseudo) throws MauvaisIdentifiantConnexionException {
+        this.checkIdConnexion(pseudo);
+        Joueur j = this.joueursActuels.get(pseudo);
+        int nb = j.getNbPartiesJouees();
+        double ratio = (double)this.getOrCreateJoueur(pseudo).getNbPartiesGagnees()/((double)nb);
+        return new Statistiques(nb,ratio);
+    }
+
+    /**
+     * Permet de récupérer l'historique des parties d'un joueur connecté
+     * @param pseudo
+     * @return
+     * @throws MauvaisIdentifiantConnexionException
+     */
+    @Override
+    public Collection<Partie> getAllParties(String pseudo) throws MauvaisIdentifiantConnexionException {
+        Joueur j = getOrCreateJoueur(pseudo);
+        return this.joueursActuels.get(pseudo).getHistorique();
+    }
+
+    @Override
+    public Joueur getOrCreateJoueur(String pseudo) {
+        if (joueursActuels.containsKey(pseudo)){
+            return joueursActuels.get(pseudo);
+        }
+        Joueur j = new Joueur(pseudo);
+        joueursActuels.put(pseudo,j);
+        return j;
+    }
+
+    @Override
+    public void suppressionJoueur(String pseudo) {
+        this.joueursActuels.remove(pseudo);
+    }
+
+}
+----
+
+
+
+
+
+
+
+== Suite
+
+Une fois le mécanisme opérationnel d'authentification, cachez tout ceci derrière un Consul et une Gateway.
+Détails à venir la semaine prochaine.

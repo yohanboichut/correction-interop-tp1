@@ -1,5 +1,5 @@
 # @no-cookie-jar
-POST http://localhost:8080/authent/inscription
+POST http://localhost:8081/authent/inscription
 Content-Type: application/json
 
 {"email":"yohan.boichut@univ-orleans.fr", "login":"yoh4n", "password":"babar"}
@@ -15,7 +15,7 @@ Content-Type: application/json
 
 
 
-GET http://localhost:8080/authent/inscription/yoh4n
+GET http://localhost:8081/authent/inscription/yoh4n
 Authorization: {{yoh_token}}
 
 > {%
@@ -26,7 +26,7 @@ Authorization: {{yoh_token}}
 
 ###
 
-DELETE http://localhost:8080/authent/inscription/yoh4n
+DELETE http://localhost:8081/authent/inscription/yoh4n
 Authorization: {{yoh_token}}
 
 > {%
@@ -38,7 +38,7 @@ Authorization: {{yoh_token}}
 
 ###
 
-GET http://localhost:8080/authent/inscription/yoh4n
+GET http://localhost:8081/authent/inscription/yoh4n
 Authorization: {{yoh_token}}
 
 > {%

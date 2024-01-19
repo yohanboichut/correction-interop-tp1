@@ -1,0 +1,29 @@
+# @no-cookie-jar
+POST http://localhost:8081/authent/inscription
+Content-Type: application/json
+
+{"email":"yohan.boichut@univ-orleans.fr", "login":"yoh4n", "password":"babar"}
+
+> {%
+    client.global.set("yoh_token", response.headers.valueOf("Authorization"));
+    client.test("Request executed successfully", function() {
+        client.assert(response.status === 201, "Response status is not 201");
+    });
+%}
+
+###
+
+
+
+POST http://localhost:8082/jeu/partie
+Authorization: {{yoh_token}}
+Content-Type: application/x-www-form-urlencoded
+
+prediction=Pile
+
+
+###
+
+GET http://localhost:8082/jeu/statistiques
+Authorization: {{yoh_token}}
+Accept: application/json

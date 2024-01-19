@@ -18,7 +18,7 @@
         <module>modeleGestionParties</module>
         <module>modeleGestionUtilisateurs</module>
         <module>authentification</module>
-<!--        <module>servicePileFace</module>-->
+        <module>servicePileFace</module>
 
     </modules>
 

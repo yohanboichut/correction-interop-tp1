@@ -12,12 +12,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.annotation.web.configurers.oauth2.server.resource.OAuth2ResourceServerConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.DelegatingPasswordEncoder;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -55,9 +58,9 @@ public class AuthentConfig {
                         .requestMatchers(HttpMethod.POST,"/authent/login").permitAll()
                         .anyRequest().authenticated()
                 )
-                .csrf().disable()
+                .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .oauth2ResourceServer(OAuth2ResourceServerConfigurer::jwt)
+                .oauth2ResourceServer(httpSecurityOAuth2ResourceServerConfigurer -> httpSecurityOAuth2ResourceServerConfigurer.jwt(Customizer.withDefaults()))
                 .exceptionHandling((exceptions) -> exceptions
                         .authenticationEntryPoint(new BearerTokenAuthenticationEntryPoint())
                         .accessDeniedHandler(new BearerTokenAccessDeniedHandler()));
@@ -75,16 +78,7 @@ public class AuthentConfig {
     }
     @Bean
     public PasswordEncoder delegatingPasswordEncoder() {
-        String idForEncode = "bcrypt";;
-        PasswordEncoder defaultEncoder = new BCryptPasswordEncoder();
-        Map<String, PasswordEncoder> encoders = Map.of(
-                idForEncode, defaultEncoder,
-                "noop", NoOpPasswordEncoder.getInstance(),
-                "scrypt", SCryptPasswordEncoder.defaultsForSpringSecurity_v4_1(),
-                "sha256", new StandardPasswordEncoder()
-        );
-
-        return new DelegatingPasswordEncoder(idForEncode, encoders);
+        return PasswordEncoderFactories.createDelegatingPasswordEncoder();
     }
 
 
